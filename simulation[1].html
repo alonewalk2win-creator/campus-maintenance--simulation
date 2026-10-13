@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Campus Maintenance Simulation: Manual Register vs Database System</title>
+<style>
+:root{
+  --bg:#f3f5f7;--card:#ffffff;--ink:#17222b;--mute:#64727f;--line:#dfe5ea;
+  --manual:#e36414;--db:#16697a;--ok:#2b8a5a;--bad:#c0392b;--warn:#c9a227;--pale:#eef4f6;
+  --open:#e36414;--assigned:#2f6db5;--prog:#c9a227;--hold:#7b4ba6;--res:#2b8a5a;--closed:#5c6b77;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11181d;--card:#19232a;--ink:#e8eef2;--mute:#9aaab6;--line:#2b3943;--pale:#1f2d35;
+    --manual:#f08a4b;--db:#3fb5c9;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11181d;--card:#19232a;--ink:#e8eef2;--mute:#9aaab6;--line:#2b3943;--pale:#1f2d35;
+  --manual:#f08a4b;--db:#3fb5c9;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Calibri,Arial,sans-serif;font-size:14px;line-height:1.4}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 40px}
+h1{font-size:22px;margin:0 0 2px}
+.sub{color:var(--mute);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.controls{display:grid;gap:14px;grid-template-columns:auto 1fr;align-items:start;margin-bottom:14px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select{font:inherit;color:var(--ink)}
+button{border:1px solid var(--line);background:var(--card);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+button:hover{background:var(--pale)}
+button.primary{background:var(--db);border-color:var(--db);color:#fff}
+button.danger{border-color:var(--bad);color:var(--bad)}
+select{padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.sliders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sl label{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);font-weight:600;margin-bottom:2px}
+.sl input{width:100%}
+.clock{font-size:15px;font-weight:700;margin-left:6px;white-space:nowrap}
+.verdict{margin:0 0 14px;padding:12px 16px;border-radius:12px;background:var(--pale);border:1px solid var(--line);font-size:14px}
+.verdict b{color:var(--db)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sys h2{margin:0 0 2px;font-size:16px;display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.sys .desc{color:var(--mute);font-size:12px;margin:0 0 10px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.kpi{background:var(--pale);border-radius:8px;padding:8px 9px}
+.kpi b{display:block;font-size:19px;line-height:1.1}
+.kpi span{font-size:10.5px;color:var(--mute);text-transform:uppercase;letter-spacing:.03em}
+.kpi.bad b{color:var(--bad)} .kpi.good b{color:var(--ok)}
+.stat{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--line);margin:4px 0 4px}
+.stat i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--mute);margin-bottom:10px}
+.legend s{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;text-decoration:none;vertical-align:-1px}
+.techs{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;margin-bottom:10px}
+.tech{border:1px solid var(--line);border-radius:7px;padding:4px 6px;font-size:11px}
+.tech.over{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.tech.away{opacity:.55;border-style:dashed}
+.tech .nm{display:flex;justify-content:space-between;color:var(--mute)}
+.slots{display:flex;gap:3px;margin-top:3px;flex-wrap:wrap}
+.slots i{width:12px;height:12px;border-radius:3px;border:1px solid var(--line);display:block}
+.slots i.f{background:var(--db);border-color:var(--db)}
+.slots i.x{background:var(--bad);border-color:var(--bad)}
+.log{list-style:none;margin:0;padding:0;font-size:12px;min-height:118px}
+.log li{padding:3px 0;border-bottom:1px solid var(--line);display:flex;gap:8px}
+.log time{color:var(--mute);min-width:62px;flex-shrink:0}
+.log .bad{color:var(--bad)} .log .ok{color:var(--ok)} .log .warn{color:var(--warn)}
+.secH{font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
+.chartCard{margin-top:14px}
+.tabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
+.tabs button{padding:5px 11px;font-size:12px}
+.tabs button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+svg{width:100%;height:auto;display:block}
+.rules{margin-top:14px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.rule{background:var(--pale);border-radius:8px;padding:9px 10px;font-size:12px}
+.rule b{display:block;margin-bottom:2px;color:var(--db)}
+.rule span{color:var(--mute)}
+.foot{color:var(--mute);font-size:12px;margin-top:12px}
+@media (max-width:860px){
+  .controls,.cols{grid-template-columns:1fr}
+  .sliders{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rules{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Campus Maintenance Simulation</h1>
+  <p class="sub">The same stream of complaints is handled by a paper-style register and by the rule-enforcing database system from the project. One simulated tick is one hour.</p>
+
+  <div class="card controls">
+    <div class="btns">
+      <button id="play" class="primary">Play</button>
+      <button id="step">+1 hour</button>
+      <button id="day">+1 day</button>
+      <select id="speed" aria-label="Speed">
+        <option value="3">Slow</option><option value="10" selected>Normal</option><option value="40">Fast</option><option value="120">Very fast</option>
+      </select>
+      <button id="reset">Reset</button>
+      <span class="clock" id="clock">Day 1, 00:00</span>
+    </div>
+    <div>
+      <div class="sliders">
+        <div class="sl"><label>Complaints per hour <span id="vRate">3.5</span></label><input id="rate" type="range" min="0.5" max="6" step="0.5" value="3.5"></div>
+        <div class="sl"><label>Technicians (applies on reset) <span id="vTech">12</span></label><input id="techs" type="range" min="6" max="24" step="1" value="12"></div>
+        <div class="sl"><label>Max active jobs per technician <span id="vCap">3</span></label><input id="cap" type="range" min="1" max="6" step="1" value="3"></div>
+      </div>
+      <div class="btns" style="margin-top:10px">
+        <button id="surge" class="danger">Surge: 15 critical complaints</button>
+        <button id="away" class="danger">Send a technician on leave (24 h)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict">Press Play to start the simulation.</div>
+
+  <div class="cols">
+    <div class="card sys" id="sysM"></div>
+    <div class="card sys" id="sysD"></div>
+  </div>
+
+  <div class="card chartCard">
+    <div class="tabs"><span class="secH" style="margin:0 8px 0 0">Chart</span>
+      <button data-c="backlog" class="on">Waiting requests</button>
+      <button data-c="breach">SLA breaches (cumulative)</button>
+      <button data-c="over">Overload hours (cumulative)</button>
+    </div>
+    <svg id="chart" viewBox="0 0 760 230" role="img" aria-label="Comparison chart of the two systems over time"></svg>
+  </div>
+
+  <div class="rules">
+    <div class="rule"><b>Unique request numbers</b><span>Nothing is lost or duplicated: every complaint gets a row.</span></div>
+    <div class="rule"><b>Closure details required</b><span>A blank closure is refused until remarks are entered.</span></div>
+    <div class="rule"><b>Non-negative materials and costs</b><span>Stock and cost stay valid; shown in the app, not in this model.</span></div>
+    <div class="rule"><b>Valid status transitions</b><span>Requests move only along the allowed workflow.</span></div>
+    <div class="rule"><b>Assignment control</b><span>No technician gets more than the maximum active jobs.</span></div>
+  </div>
+  <p class="foot">Model: same random complaints for both systems. Manual register: the clerk takes complaints in arrival order, picks any technician of the trade without seeing their load (and does not know who is on leave), some complaints are never written down, and about one in three closures has no remarks. Database system: priority order, least-loaded technician within capacity, jobs of a technician on leave return to the queue, and rule violations are blocked. Both dispatchers handle at most 3 complaints per hour. A technician carrying more jobs than the maximum works slower on each job.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+var CATS=["Electrical","Plumbing","Furniture","HVAC","IT/AV","Civil"];
+var SHORT=["EL","PL","FU","HV","IT","CV"];
+var PRI=[{n:"Critical",sla:4,w:1},{n:"High",sla:24,w:3},{n:"Medium",sla:72,w:4},{n:"Low",sla:120,w:2}];
+var DISPATCH=3;
+var STATUS=[["Open","--open"],["Assigned","--assigned"],["In Progress","--prog"],["On Hold","--hold"],["Resolved","--res"],["Closed","--closed"]];
+
+function rng(seed){var a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+
+var S; // global sim state
+var chartMode="backlog";
+var running=false,acc=0,last=0;
+
+function newSys(kind,seed,nTech,cap){
+  var techs=[];for(var i=0;i<nTech;i++)techs.push({id:i,cat:i%6,n:Math.floor(i/6)+1,cap:cap,active:[],away:0,warned:false});
+  return {kind:kind,r:rng(seed),techs:techs,reqs:[],log:[],hist:[],
+    respSum:0,respN:0,resSum:0,resN:0,breaches:0,overload:0,lost:0,undoc:0,blocked:0,created:0,closed:0};
+}
+function init(){
+  var seed=Math.floor(Math.random()*1e6);
+  var nTech=+document.getElementById("techs").value, cap=+document.getElementById("cap").value;
+  S={t:0,seed:seed,arr:rng(seed+7),id:0,M:newSys("manual",seed+1,nTech,cap),D:newSys("db",seed+2,nTech,cap)};
+  render();
+}
+function poisson(r,l){var L=Math.exp(-l),k=0,p=1;do{k++;p*=r();}while(p>L&&k<60);return k-1;}
+function pickPri(r,forceCrit){if(forceCrit)return 0;var tot=10,x=r()*tot,c=0;for(var i=0;i<PRI.length;i++){c+=PRI[i].w;if(x<c)return i;}return 3;}
+function makeReq(forceCrit){
+  S.id++;var r=S.arr;
+  var cat=Math.floor(r()*6),pri=pickPri(r,forceCrit);
+  return {id:S.id,no:"MR-"+String(S.id).padStart(4,"0"),cat:cat,pri:pri,work:3+r()*9,created:S.t};
+}
+function clone(q){return {id:q.id,no:q.no,cat:q.cat,pri:q.pri,created:q.created,remaining:q.work,status:"Open",tech:null,assigned:null,breached:false,holdLeft:0,closeAt:0,remarks:true,blankTried:false,refused:false};}
+function stamp(t){var d=Math.floor(t/24)+1,h=t%24;return "D"+d+" "+String(h).padStart(2,"0")+":00";}
+function log(sys,cls,msg){sys.log.unshift({t:S.t,cls:cls,msg:msg});if(sys.log.length>8)sys.log.pop();}
+
+function addRequests(list){
+  list.forEach(function(q){
+    [S.M,S.D].forEach(function(sys){
+      var c=clone(q);
+      sys.created++;
+      if(sys.kind==="manual"&&sys.r()<0.04){sys.lost++;c.status="Lost";sys.reqs.push(c);log(sys,"bad","Complaint "+q.no+" never written in the register (lost)");return;}
+      sys.reqs.push(c);
+    });
+  });
+}
+function dispatch(sys){
+  var open=sys.reqs.filter(function(q){return q.status==="Open";});
+  if(sys.kind==="db")open.sort(function(a,b){return a.pri-b.pri||a.created-b.created;});
+  else open.sort(function(a,b){return a.created-b.created;});
+  var done=0;
+  for(var i=0;i<open.length&&done<DISPATCH;i++){
+    var q=open[i],tech=null;
+    var same=sys.techs.filter(function(t){return t.cat===q.cat;});
+    if(sys.kind==="db"){
+      var free=same.filter(function(t){return !t.away&&t.active.length<t.cap;});
+      if(!free.length){
+        if(!q.refused&&same.some(function(t){return !t.away&&t.active.length>=t.cap;})){q.refused=true;sys.blocked++;log(sys,"warn","Assignment refused for "+q.no+": all "+CATS[q.cat]+" technicians at max active jobs");}
+        continue;
+      }
+      free.sort(function(a,b){return a.active.length-b.active.length;});
+      tech=free[0];
+    }else{
+      tech=same[Math.floor(sys.r()*same.length)];
+    }
+    q.tech=tech;q.status="Assigned";q.assigned=S.t;tech.active.push(q);done++;
+    var resp=S.t-q.created;sys.respSum+=resp;sys.respN++;
+    if(resp>PRI[q.pri].sla&&!q.breached){q.breached=true;sys.breaches++;}
+    if(sys.kind==="manual"&&tech.active.length>tech.cap&&!tech.warned){tech.warned=true;log(sys,"bad",SHORT[tech.cat]+tech.n+" now has "+tech.active.length+" jobs (limit "+tech.cap+")");}
+  }
+}
+function progress(sys){
+  sys.techs.forEach(function(t){
+    if(t.away>0){t.away--; if(t.away===0)t.warned=false;}
+    var n=t.active.length;if(!n)return;
+    if(n<=t.cap)t.warned=false;
+    if(t.away>0)return;
+    var f=n<=t.cap?1:(t.cap/n)*0.85;
+    if(n>t.cap)sys.overload+=n-t.cap;
+    t.active.slice().forEach(function(q){
+      if(q.status==="Assigned"){q.status="In Progress";return;}
+      if(q.status==="On Hold"){q.holdLeft--;if(q.holdLeft<=0)q.status="In Progress";return;}
+      if(sys.r()<0.025){q.status="On Hold";q.holdLeft=6+Math.floor(sys.r()*7);return;}
+      q.remaining-=f;
+      if(q.remaining<=0){
+        sys.resSum+=S.t-q.created;sys.resN++;q.status="Resolved";q.closeAt=S.t+1+Math.floor(sys.r()*5);
+        t.active.splice(t.active.indexOf(q),1);
+      }
+    });
+  });
+}
+function closing(sys){
+  sys.reqs.forEach(function(q){
+    if(q.status!=="Resolved"||S.t<q.closeAt)return;
+    if(sys.kind==="db"){
+      if(!q.blankTried&&sys.r()<0.35){q.blankTried=true;sys.blocked++;q.closeAt=S.t+1;log(sys,"warn","Closure of "+q.no+" refused: remarks required");return;}
+      q.remarks=true;
+    }else{
+      q.remarks=sys.r()>0.33;if(!q.remarks)sys.undoc++;
+    }
+    q.status="Closed";sys.closed++;
+  });
+}
+function breachScan(sys){
+  sys.reqs.forEach(function(q){
+    if(q.status==="Open"&&!q.breached&&S.t-q.created>PRI[q.pri].sla){q.breached=true;sys.breaches++;if(q.pri===0)log(sys,"bad","Critical "+q.no+" waiting beyond its 4 h SLA");}
+  });
+}
+function leave(sys,idx){
+  var t=sys.techs[idx];if(!t||t.away>0)return;
+  t.away=24;
+  if(sys.kind==="db"){
+    var n=t.active.length;
+    t.active.forEach(function(q){q.status="Open";q.tech=null;q.assigned=null;q.refused=false;});
+    t.active=[];
+    log(sys,"ok",SHORT[t.cat]+t.n+" set inactive: "+n+" job(s) released back to the queue");
+  }else{
+    log(sys,"bad",SHORT[t.cat]+t.n+" on leave but register still shows "+t.active.length+" job(s) with them");
+  }
+}
+function backlog(sys){return sys.reqs.filter(function(q){return q.status!=="Closed"&&q.status!=="Lost";}).length;}
+
+function tick(){
+  var n=poisson(S.arr,+document.getElementById("rate").value);
+  var arr=[];for(var i=0;i<n;i++)arr.push(makeReq(false));
+  addRequests(arr);
+  [S.M,S.D].forEach(function(sys){
+    dispatch(sys);progress(sys);closing(sys);breachScan(sys);
+    sys.hist.push({t:S.t,b:backlog(sys),br:sys.breaches,o:sys.overload});
+  });
+  S.t++;
+}
+
+// ---------------- rendering
+function counts(sys){var c={};STATUS.forEach(function(s){c[s[0]]=0;});sys.reqs.forEach(function(q){if(c[q.status]!==undefined)c[q.status]++;});return c;}
+function kpi(label,val,cls){return '<div class="kpi '+(cls||"")+'"><b>'+val+'</b><span>'+label+'</span></div>';}
+function sysHTML(sys){
+  var manual=sys.kind==="manual",c=counts(sys),tot=Math.max(1,sys.reqs.filter(function(q){return q.status!=="Lost";}).length);
+  var avg=sys.respN?(sys.respSum/sys.respN).toFixed(1)+" h":"-";
+  var pct=sys.created?Math.round(sys.breaches/sys.created*100)+"%":"0%";
+  var h='<h2><span class="dot" style="background:var(--'+(manual?"manual":"db")+')"></span>'+(manual?"Manual register":"Database system (this project)")+'</h2>';
+  h+='<p class="desc">'+(manual?"Paper-style register, no enforced rules":"Constraints, triggers and priority-based assignment")+'</p>';
+  h+='<div class="kpis">'+kpi("Waiting",backlog(sys),manual?"bad":"")+kpi("Avg time to assign",avg)+kpi("Avg time to resolve",sys.resN?(sys.resSum/sys.resN).toFixed(1)+" h":"-")+kpi("SLA breached",pct,manual?"bad":"good")+
+     kpi("Overload hours",sys.overload,sys.overload&&manual?"bad":"good")+kpi("Lost",sys.lost,sys.lost?"bad":"")+kpi("No-remark closures",sys.undoc,sys.undoc?"bad":"")+kpi("Violations blocked",manual?"0":sys.blocked,manual?"":"good")+'</div>';
+  h+='<div class="secH">Requests by status</div><div class="stat">'+STATUS.map(function(s){return '<i style="width:'+(c[s[0]]/tot*100)+'%;background:var('+s[1]+')" title="'+s[0]+': '+c[s[0]]+'"></i>';}).join("")+'</div>';
+  h+='<div class="legend">'+STATUS.map(function(s){return '<span><s style="background:var('+s[1]+')"></s>'+s[0]+' '+c[s[0]]+'</span>';}).join("")+'</div>';
+  h+='<div class="secH">Technicians (each square = one active job)</div><div class="techs">'+sys.techs.map(function(t){
+    var n=t.active.length,slots="",m=Math.max(t.cap,n);
+    for(var i=0;i<m;i++)slots+='<i class="'+(i<n?(i>=t.cap?"x":"f"):"")+'"></i>';
+    return '<div class="tech'+(n>t.cap?" over":"")+(t.away>0?" away":"")+'"><div class="nm"><span>'+SHORT[t.cat]+t.n+'</span><span>'+(t.away>0?"leave":n+"/"+t.cap)+'</span></div><div class="slots">'+slots+'</div></div>';
+  }).join("")+'</div>';
+  h+='<div class="secH">Event log</div><ul class="log">'+(sys.log.length?sys.log.map(function(e){return '<li><time>'+stamp(e.t)+'</time><span class="'+e.cls+'">'+e.msg+'</span></li>';}).join(""):'<li><span class="muted">No events yet</span></li>')+'</ul>';
+  return h;
+}
+function chartHTML(){
+  var key={backlog:"b",breach:"br",over:"o"}[chartMode];
+  var W=760,H=230,L=44,R=12,T=12,B=26;
+  var hm=S.M.hist,hd=S.D.hist;
+  if(hm.length<2)return '<text x="'+W/2+'" y="'+H/2+'" text-anchor="middle" fill="var(--mute)" font-size="13">Run the simulation to see the comparison</text>';
+  var step=Math.max(1,Math.ceil(hm.length/220));
+  function pts(h){var o=[];for(var i=0;i<h.length;i+=step)o.push(h[i]);o.push(h[h.length-1]);return o;}
+  var pm=pts(hm),pd=pts(hd);
+  var maxY=1;pm.concat(pd).forEach(function(p){if(p[key]>maxY)maxY=p[key];});
+  maxY=Math.ceil(maxY*1.1/5)*5||5;
+  var tmax=hm[hm.length-1].t||1;
+  function X(t){return L+(t/tmax)*(W-L-R);} function Y(v){return T+(1-v/maxY)*(H-T-B);}
+  function path(p){return p.map(function(q,i){return (i?"L":"M")+X(q.t).toFixed(1)+" "+Y(q[key]).toFixed(1);}).join(" ");}
+  var g="";
+  for(var i=0;i<=4;i++){var v=maxY*i/4,y=Y(v);g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end" fill="var(--mute)" font-size="11">'+Math.round(v)+'</text>';}
+  var days=Math.floor(tmax/24);var every=Math.max(1,Math.ceil(days/8));
+  for(var d=0;d<=days;d+=every){var x=X(d*24);g+='<text x="'+x+'" y="'+(H-8)+'" text-anchor="middle" fill="var(--mute)" font-size="11">Day '+(d+1)+'</text>';}
+  g+='<path d="'+path(pm)+'" fill="none" stroke="var(--manual)" stroke-width="2.4"/><path d="'+path(pd)+'" fill="none" stroke="var(--db)" stroke-width="2.4"/>';
+  g+='<g font-size="12"><rect x="'+(L+8)+'" y="'+(T+4)+'" width="10" height="10" rx="2" fill="var(--manual)"/><text x="'+(L+24)+'" y="'+(T+13)+'" fill="var(--ink)">Manual register</text><rect x="'+(L+130)+'" y="'+(T+4)+'" width="10" height="10" rx="2" fill="var(--db)"/><text x="'+(L+146)+'" y="'+(T+13)+'" fill="var(--ink)">Database system</text></g>';
+  return g;
+}
+function verdict(){
+  if(S.t<24){return "Run at least one simulated day to see the comparison. Try the surge or technician-leave buttons.";}
+  var M=S.M,D=S.D,bm=backlog(M),bd=backlog(D);
+  function d(a,b,w){var x=a-b;return x>0?'<b>'+x+' fewer</b> '+w:(x<0?'<b>'+(-x)+' more</b> '+w:'the same '+w);}
+  return "After day "+Math.ceil(S.t/24)+": the database system has "+d(bm,bd,"waiting requests")+", "+d(M.breaches,D.breaches,"SLA breaches")+", avoided <b>"+(M.overload-D.overload)+"</b> technician overload hours, lost <b>0</b> complaints (manual lost "+M.lost+"), left <b>0</b> closures undocumented (manual "+M.undoc+") and blocked <b>"+D.blocked+"</b> rule violations at the source. Average time to resolve: <b>"+(D.resN?(D.resSum/D.resN).toFixed(1):"-")+" h</b> against "+(M.resN?(M.resSum/M.resN).toFixed(1):"-")+" h for the manual register.";
+}
+var lastRender=0;
+function render(){
+  document.getElementById("sysM").innerHTML=sysHTML(S.M);
+  document.getElementById("sysD").innerHTML=sysHTML(S.D);
+  document.getElementById("chart").innerHTML=chartHTML();
+  document.getElementById("verdict").innerHTML=verdict();
+  document.getElementById("clock").textContent="Day "+(Math.floor(S.t/24)+1)+", "+String(S.t%24).padStart(2,"0")+":00";
+}
+
+// ---------------- controls
+function loop(ts){
+  if(!running)return;
+  if(!last)last=ts;
+  var dt=(ts-last)/1000;last=ts;
+  acc+=dt*(+document.getElementById("speed").value);
+  var k=0;while(acc>=1&&k<200){tick();acc-=1;k++;}
+  if(k)render();
+  requestAnimationFrame(loop);
+}
+function setRunning(v){running=v;document.getElementById("play").textContent=v?"Pause":"Play";if(v){last=0;requestAnimationFrame(loop);}}
+document.getElementById("play").onclick=function(){setRunning(!running);};
+document.getElementById("step").onclick=function(){tick();render();};
+document.getElementById("day").onclick=function(){for(var i=0;i<24;i++)tick();render();};
+document.getElementById("reset").onclick=function(){setRunning(false);init();};
+document.getElementById("rate").oninput=function(){document.getElementById("vRate").textContent=(+this.value).toFixed(1);};
+document.getElementById("techs").oninput=function(){document.getElementById("vTech").textContent=this.value;};
+document.getElementById("techs").onchange=function(){setRunning(false);init();};
+document.getElementById("cap").oninput=function(){document.getElementById("vCap").textContent=this.value;var c=+this.value;[S.M,S.D].forEach(function(s){s.techs.forEach(function(t){t.cap=c;if(s.kind==="db"&&t.active.length>c){/* existing jobs finish; no new ones accepted */}});});render();};
+document.getElementById("surge").onclick=function(){var a=[];for(var i=0;i<15;i++)a.push(makeReq(true));addRequests(a);[S.M,S.D].forEach(function(s){log(s,"warn","Surge: 15 critical complaints logged");});render();};
+document.getElementById("away").onclick=function(){var busy=S.D.techs.map(function(t,i){return {i:i,n:t.active.length};}).sort(function(a,b){return b.n-a.n;});var idx=busy[0].i;[S.M,S.D].forEach(function(s){leave(s,idx);});render();};
+Array.prototype.forEach.call(document.querySelectorAll(".tabs button"),function(b){b.onclick=function(){chartMode=b.getAttribute("data-c");Array.prototype.forEach.call(document.querySelectorAll(".tabs button"),function(x){x.classList.toggle("on",x===b);});render();};});
+
+init();
+})();
+</script>
+</body>
+</html>
